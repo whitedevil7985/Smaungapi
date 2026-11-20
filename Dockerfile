@@ -49,7 +49,15 @@ ENV HOME="/home/app"
 COPY --from=builder --chown=app:app /app/main /usr/local/bin/app
 COPY --from=builder --chown=app:app /app/libtdjson.so.* /home/app/
 
-RUN chown -R app:app /opt/deno
+# main.go loads this exact TDLib filename. Normalize the downloaded
+# versioned library name to the path expected by gotdbot.
+RUN set -eux; \
+    if [ ! -e /home/app/libtdjson.so.1.8.70 ]; then \
+        lib="$(find /home/app -maxdepth 1 -type f -name 'libtdjson.so.*' ! -name 'libtdjson.so.1.8.70' | sort | head -n 1)"; \
+        test -n "$lib"; \
+        ln -s "$(basename "$lib")" /home/app/libtdjson.so.1.8.70; \
+    fi; \
+    chown -R app:app /home/app /opt/deno
 
 USER app
 
